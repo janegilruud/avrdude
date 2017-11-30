@@ -1043,6 +1043,13 @@ int main(int argc, char * argv [])
   sig_again:
     usleep(waittime);
     if (init_ok) {
+      if ( (p->flags & AVRPART_HAS_UPDI) && (erase == 1) && !(uflags & UF_AUTO_ERASE) ) {
+        if (quell_progress < 2) {
+          avrdude_message(MSG_INFO, "%s: erasing chip\n", progname);
+        }
+        exitrc = avr_chip_erase(pgm, p);
+        if(exitrc) goto main_exit;
+      }
       rc = avr_signature(pgm, p);
       if (rc != 0) {
         avrdude_message(MSG_INFO, "%s: error reading signature data, rc=%d\n",
