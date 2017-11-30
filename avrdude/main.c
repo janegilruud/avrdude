@@ -1196,7 +1196,7 @@ int main(int argc, char * argv [])
     }
   }
 
-  if (init_ok && erase) {
+  if (init_ok && erase && !(p->flags & AVRPART_HAS_UPDI)) {
     /*
      * erase the chip's flash and eeprom memories, this is required
      * before the chip can accept new programming
