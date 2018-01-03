@@ -203,6 +203,7 @@ typedef struct opcode {
 
 #define AVR_DESCLEN 64
 #define AVR_IDLEN   32
+#define AVR_FAMILYIDLEN 32
 #define CTL_STACK_SIZE 32
 #define FLASH_INSTR_SIZE 3
 #define EEPROM_INSTR_SIZE 20
@@ -212,6 +213,7 @@ typedef struct opcode {
 typedef struct avrpart {
   char          desc[AVR_DESCLEN];  /* long part name */
   char          id[AVR_IDLEN];      /* short part name */
+  char          family_id[AVR_FAMILYIDLEN]; /* family id in the SIB */
   int           stk500_devcode;     /* stk500 device code */
   int           avr910_devcode;     /* avr910 device code */
   int           chip_erase_delay;   /* microseconds */
