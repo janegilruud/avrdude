@@ -1045,6 +1045,27 @@ int main(int argc, char * argv [])
     if (init_ok) {
       rc = avr_signature(pgm, p);
       if (rc != 0) {
+        // -68 == -(0x44) == -(RSP3_FAIL_OCD_LOCKED)
+        if ((rc == -68) && (p->flags & AVRPART_HAS_UPDI) && (attempt < 1)) {
+          attempt++;
+//          if (!ovsigck && pgm->read_sib) {
+//              // Read SIB and compare FamilyID
+//          }
+          if(erase) {
+            erase = 0;
+            if (uflags & UF_NOWRITE) {
+              avrdude_message(MSG_INFO, "%s: conflicting -e and -n options specified, NOT erasing chip\n",
+                              progname);
+            } else {
+              if (quell_progress < 2) {
+                avrdude_message(MSG_INFO, "%s: erasing chip\n", progname);
+              }
+              exitrc = avr_chip_erase(pgm, p);
+              if(exitrc) goto main_exit;
+              goto sig_again;
+            }
+          }
+        }
         avrdude_message(MSG_INFO, "%s: error reading signature data, rc=%d\n",
           progname, rc);
         exitrc = 1;

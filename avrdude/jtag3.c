@@ -842,15 +842,15 @@ int jtag3_recv(PROGRAMMER * pgm, unsigned char **msg) {
   if ((c & RSP3_STATUS_MASK) != RSP3_OK) {
     if ((c == RSP3_FAILED) && ((*resp)[3] == RSP3_FAIL_OCD_LOCKED)) {
       avrdude_message(MSG_INFO,
-		      "%s: Device is locked! Chip erase required to unlock.\n",
-		      progname);
+		      "\njtag3_command(): Device is locked! Chip erase required to unlock.\n");
     } else {
       avrdude_message(MSG_INFO, "%s: bad response to %s command: 0x%02x\n",
 		      progname, descr, c);
     }
+    status = (*resp)[3];
     free(*resp);
     resp = 0;
-    return -1;
+    return -status;
   }
 
   return status;
@@ -949,6 +949,7 @@ static int jtag3_program_enable_dummy(PROGRAMMER * pgm, AVRPART * p)
 static int jtag3_program_enable(PROGRAMMER * pgm)
 {
   unsigned char buf[3], *resp;
+  int status;
 
   if (PDATA(pgm)->prog_enabled)
     return 0;
@@ -957,14 +958,14 @@ static int jtag3_program_enable(PROGRAMMER * pgm)
   buf[1] = CMD3_ENTER_PROGMODE;
   buf[2] = 0;
 
-  if (jtag3_command(pgm, buf, 3, &resp, "enter progmode") >= 0) {
+  if ((status = jtag3_command(pgm, buf, 3, &resp, "enter progmode")) >= 0) {
     free(resp);
     PDATA(pgm)->prog_enabled = 1;
 
     return 0;
   }
 
-  return -1;
+  return status;
 }
 
 static int jtag3_program_disable(PROGRAMMER * pgm)
@@ -1286,17 +1287,28 @@ static int jtag3_initialize(PROGRAMMER * pgm, AVRPART * p)
   }
 
   /*
-   * Depending on the target connection, there are two different
+   * Depending on the target connection, there are three different
    * possible replies of the ICE.  For a JTAG connection, the reply
    * format is RSP3_DATA, followed by 4 bytes of the JTAG ID read from
-   * the device (followed by a trailing 0).  For all other connections
+   * the device (followed by a trailing 0).
+   * For a UPDI connection the reply format is RSP3_DATA, followed by
+   * 4 bytes of the SIB Family_ID read from the device (followed by a
+   * trailing 0).
+   * For all other connections
    * (except ISP which is handled completely differently, but that
    * doesn't apply here anyway), the response is just RSP_OK.
    */
-  if (resp[1] == RSP3_DATA && status >= 7)
-    /* JTAG ID has been returned */
-    avrdude_message(MSG_NOTICE, "%s: JTAG ID returned: 0x%02x 0x%02x 0x%02x 0x%02x\n",
-	    progname, resp[3], resp[4], resp[5], resp[6]);
+  if (resp[1] == RSP3_DATA && status >= 7) {
+    if (p->flags & AVRPART_HAS_UPDI) {
+      /* Family ID has been returned */
+      avrdude_message(MSG_NOTICE, "%s: Family ID returned: %c%c%c%c\n",
+	      progname, resp[3], resp[4], resp[5], resp[6]);
+    }
+    else
+      /* JTAG ID has been returned */
+      avrdude_message(MSG_NOTICE, "%s: JTAG ID returned: 0x%02x 0x%02x 0x%02x 0x%02x\n",
+	      progname, resp[3], resp[4], resp[5], resp[6]);
+  }
 
   free(resp);
 
@@ -1806,8 +1818,9 @@ static int jtag3_read_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * mem,
   avrdude_message(MSG_NOTICE2, "%s: jtag3_read_byte(.., %s, 0x%lx, ...)\n",
 	    progname, mem->desc, addr);
 
-  if (!(pgm->flag & PGM_FL_IS_DW) && jtag3_program_enable(pgm) < 0)
-    return -1;
+  if (!(pgm->flag & PGM_FL_IS_DW))
+    if ((status = jtag3_program_enable(pgm)) < 0)
+      return status;
 
   cmd[0] = SCOPE_AVR;
   cmd[1] = CMD3_READ_MEMORY;
@@ -1886,7 +1899,7 @@ static int jtag3_read_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * mem,
 
     if (addr == 0) {
       if ((status = jtag3_command(pgm, cmd, 12, &resp, "read memory")) < 0)
-	return -1;
+	return status;
 
       signature_cache[0] = resp[4];
       signature_cache[1] = resp[5];
@@ -1935,7 +1948,7 @@ static int jtag3_read_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * mem,
   }
 
   if ((status = jtag3_command(pgm, cmd, 12, &resp, "read memory")) < 0)
-    return -1;
+    return status;
 
   if (resp[1] != RSP3_DATA ||
       status < (pagesize? pagesize: 1) + 4) {
@@ -2061,7 +2074,7 @@ static int jtag3_write_byte(PROGRAMMER * pgm, AVRPART * p, AVRMEM * mem,
   cmd[13] = data;
 
   if ((status = jtag3_command(pgm, cmd, 14, &resp, "write memory")) < 0)
-    return -1;
+    return status;
 
   free(resp);
 
