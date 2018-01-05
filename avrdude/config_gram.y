@@ -680,7 +680,7 @@ part_parm :
   K_FAMILY_ID TKN_EQUAL TKN_STRING
     {
       strncpy(current_part->family_id, $3->value.string, AVR_FAMILYIDLEN);
-      current_part->family_id[AVR_FAMILYIDLEN-1] = 0;
+      current_part->family_id[AVR_FAMILYIDLEN] = 0;
       free_token($3);
     } |
 

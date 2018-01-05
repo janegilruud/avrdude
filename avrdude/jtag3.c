@@ -2191,6 +2191,28 @@ int jtag3_setparm(PROGRAMMER * pgm, unsigned char scope,
   return status;
 }
 
+int jtag3_read_sib(PROGRAMMER * pgm, AVRPART * p, char * sib)
+{
+  int status;
+  unsigned char cmd[12];
+  unsigned char *resp = NULL;
+
+  cmd[0] = SCOPE_AVR;
+  cmd[1] = CMD3_READ_MEMORY;
+  cmd[2] = 0;
+  cmd[3] = MTYPE_SIB;
+  u32_to_b4(cmd + 4, 0);
+  u32_to_b4(cmd + 8, AVR_SIBLEN);
+
+  if ((status = jtag3_command(pgm, cmd, 12, &resp, "read SIB")) < 0)
+	return status;
+
+  memcpy(sib, resp+3, AVR_SIBLEN);
+  sib[AVR_SIBLEN] = 0; // Zero terminate string
+  avrdude_message(MSG_DEBUG, "%s: jtag3_read_sib(): Received SIB: \"%s\"\n", progname, sib);
+  free(resp);
+  return 0;
+}
 
 static void jtag3_display(PROGRAMMER * pgm, const char * p)
 {
@@ -2443,5 +2465,6 @@ void jtag3_updi_initpgm(PROGRAMMER * pgm)
   pgm->teardown       = jtag3_teardown;
   pgm->page_size      = 256;
   pgm->flag           = PGM_FL_IS_UPDI;
+  pgm->read_sib       = jtag3_read_sib;
 }
 
