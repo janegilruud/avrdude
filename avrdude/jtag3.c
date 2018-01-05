@@ -1301,8 +1301,8 @@ static int jtag3_initialize(PROGRAMMER * pgm, AVRPART * p)
    */
   if (resp[1] == RSP3_DATA && status >= 7) {
     if (p->flags & AVRPART_HAS_UPDI) {
-      /* Family ID has been returned */
-      avrdude_message(MSG_NOTICE, "%s: Family ID returned: %c%c%c%c\n",
+      /* Partial Family_ID has been returned */
+      avrdude_message(MSG_NOTICE, "%s: Partial Family_ID returned: \"%c%c%c%c\"\n",
 	      progname, resp[3], resp[4], resp[5], resp[6]);
     }
     else
