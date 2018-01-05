@@ -842,7 +842,8 @@ int jtag3_recv(PROGRAMMER * pgm, unsigned char **msg) {
   if ((c & RSP3_STATUS_MASK) != RSP3_OK) {
     if ((c == RSP3_FAILED) && ((*resp)[3] == RSP3_FAIL_OCD_LOCKED)) {
       avrdude_message(MSG_INFO,
-		      "\njtag3_command(): Device is locked! Chip erase required to unlock.\n");
+             "\n%s: Device is locked! Chip erase required to unlock.\n",
+             progname);
     } else {
       avrdude_message(MSG_INFO, "%s: bad response to %s command: 0x%02x\n",
 		      progname, descr, c);
